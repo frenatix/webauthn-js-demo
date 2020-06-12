@@ -46,6 +46,17 @@ const getUserByCredentialId = ({ credentialId }) => {
   )
 }
 
+const updateSignCount = ({ credentialId, oldSignCount, newSignCount }) => {
+  return run(
+    'UPDATE t_user SET c_signcount = $newSignCount WHERE c_credentialid = $credentialId and c_signcount = $oldSignCount',
+    {
+      $credentialId: credentialId,
+      $oldSignCount: oldSignCount,
+      $newSignCount: newSignCount
+    }
+  )
+}
+
 const getAllUsers = () => {
   return all(`SELECT ${makeSelect(COLUMNS)} FROM t_user`, {}, (rows) => {
     if (!rows) return
@@ -53,4 +64,4 @@ const getAllUsers = () => {
   })
 }
 
-module.exports = { createUser, getUserByLogin, getAllUsers, getUserByCredentialId }
+module.exports = { createUser, getUserByLogin, getAllUsers, getUserByCredentialId, updateSignCount }

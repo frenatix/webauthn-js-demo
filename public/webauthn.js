@@ -87,10 +87,12 @@ function register(username, useResidentKey) {
         })
         .then((response) => {
           if (response.status === 200) {
-            alert('Registration successful.')
+            return response.json()
           } else {
             throw new Error('Registration failed')
           }
+        }).then((data)=> {
+          alert(`Registration successful for "${data.login}"`)
         })
     })
     .catch((err) => {
@@ -143,10 +145,12 @@ function login(username) {
         })
         .then((response) => {
           if (response.status === 200) {
-            alert('Login successful')
+            return response.json()
           } else {
             throw new Error('Login failed')
           }
+        }).then((data) => {
+          alert(`Login successful for "${data.login}"`)
         })
     })
     .catch((err) => {
