@@ -1,12 +1,24 @@
 window.onload = function () {
   document.getElementById('register').onclick = function () {
-    const login = document.getElementById('login').value
-    if (!login) {
+    const username = readUsername()
+    if (!username) {
       alert('username is empty')
     } else {
-      register(login)
+      register(username)
     }
   }
+  document.getElementById('login').onclick = function () {
+    const username = readUsername()
+    if (!username) {
+      alert('username is empty')
+    } else {
+      login(username)
+    }
+  }
+}
+
+function readUsername() {
+  return document.getElementById('username').value
 }
 
 function _decodeBuffer(value) {
@@ -23,10 +35,10 @@ function arrayBufferToString(arrayBuffer) {
   return String.fromCharCode.apply(null, new Uint8Array(arrayBuffer))
 }
 
-function register(login) {
+function register(username) {
   fetch(`/api/register`, {
     method: 'PUT',
-    body: JSON.stringify({ login }),
+    body: JSON.stringify({ login: username }),
     headers: {
       'content-type': 'application/json'
     }
@@ -74,6 +86,62 @@ function register(login) {
             alert('Registration successful.')
           } else {
             throw new Error('Registration failed')
+          }
+        })
+    })
+    .catch((err) => {
+      alert(err)
+    })
+}
+
+function login(username) {
+  fetch(`/api/login`, {
+    method: 'PUT',
+    body: JSON.stringify({ login: username }),
+    headers: {
+      'content-type': 'application/json'
+    }
+  })
+    .then((response) => {
+      if (response.status !== 200) {
+        if (response.status === 404) {
+          throw new Error('Username not found (404)')
+        }
+      }
+      return response.json()
+    })
+    .then((data) => {
+      const publicKey = {
+        ...data.publicKey,
+        challenge: _decodeBuffer(data.publicKey.challenge),
+        allowCredentials: data.publicKey.allowCredentials.map((cred) => ({ ...cred, id: this._decodeBuffer(cred.id) }))
+      }
+      navigator.credentials
+        .get({
+          publicKey
+        })
+        .then((rawAssertion) => {
+          var assertion = {
+            id: base64encode(rawAssertion.rawId),
+            clientDataJSON: arrayBufferToString(rawAssertion.response.clientDataJSON),
+            userHandle: base64encode(rawAssertion.response.userHandle),
+            signature: base64encode(rawAssertion.response.signature),
+            authenticatorData: base64encode(rawAssertion.response.authenticatorData)
+          }
+
+          return fetch(`/api/verify-assertion`, {
+            method: 'PUT',
+            body: JSON.stringify({ assertion }),
+            headers: {
+              'content-type': 'application/json'
+            }
+          })
+        })
+        .then((response) => {
+          if (response.status === 200) {
+            alert('Login successful')
+          } else {
+            throw new Error('Login failed')
           }
         })
     })

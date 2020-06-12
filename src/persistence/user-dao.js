@@ -37,7 +37,7 @@ const getUserByLogin = ({ login }) => {
 
 const getUserByCredentialId = ({ credentialId }) => {
   return get(
-    `SELECT ${makeSelect(COLUMNS)} FROM t_user WHERE c_credentialid = $id`,
+    `SELECT ${makeSelect(COLUMNS)} FROM t_user WHERE c_credentialid = $credentialId`,
     { $credentialId: credentialId },
     (row) => {
       if (!row) return

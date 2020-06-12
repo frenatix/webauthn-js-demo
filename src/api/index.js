@@ -54,7 +54,7 @@ router.put('/register', async (req, res) => {
         ],
         authenticatorSelection: {
           requireResidentKey: false, // true is username-less
-          userVerification: 'required'
+          userVerification: 'preferred'
         },
         challenge,
         timeout: 60000,
@@ -88,7 +88,7 @@ router.put('/make-new-credential', async (req, res) => {
       expectedChallenge: challenge.id,
       expectedHostname: 'localhost',
       isValidCredentialId: () => true,
-      saveUserCredential: async ({id, publicKeyJwk, signCount}) => {
+      saveUserCredential: async ({ id, publicKeyJwk, signCount }) => {
         await Persistence.UserDAO.createUser({
           login: challenge.login,
           credentialId: id,
@@ -103,6 +103,77 @@ router.put('/make-new-credential', async (req, res) => {
   } catch (e) {
     console.log('Error on /api/make-new-credential', e)
     res.sendStatus(500)
+  }
+})
+
+router.put('/login', async (req, res) => {
+  try {
+    const { login } = req.body
+    console.log('Login', login)
+
+    const user = await Persistence.UserDAO.getUserByLogin({ login })
+    if (!user) {
+      res.sendStatus(404)
+      return
+    }
+    const challengeBytes = newChallenge()
+    const challenge = Buffer.from(challengeBytes).toString('base64')
+    console.log(`New challenge: ${challenge}`)
+    await Persistence.ChallengeDAO.deleteChallenge({ login })
+    await Persistence.ChallengeDAO.createChallenge({ login, id: base64url.encode(challengeBytes) })
+
+    res.json({
+      publicKey: {
+        allowCredentials: [
+          {
+            type: 'public-key',
+            id: user.credentialId
+          }
+        ],
+        challenge,
+        userVerification: 'preferred'
+      }
+    })
+  } catch (e) {
+    console.log('Error on /api/login', e)
+    res.senStatus(500)
+  }
+})
+
+router.put('/verify-assertion', async (req, res) => {
+  try {
+    const { assertion } = req.body
+    console.log('assertion', assertion)
+
+    // Check if the challenge was created by us
+    const credentialJson = JSON.parse(assertion.clientDataJSON)
+    const challenge = await Persistence.ChallengeDAO.getChallengeById({ id: credentialJson.challenge })
+    if (!challenge) {
+      console.error(`Challenge with id ${credentialJson.challenge} not found`)
+      res.sendStatus(404)
+      return
+    }
+
+    const user = await Persistence.UserDAO.getUserByCredentialId({ credentialId: assertion.id })
+    if (!user) {
+      console.error('User not found')
+      res.sendStatus(404)
+      return
+    }
+    webauthn.verifyAssertion({
+      response: assertion,
+      credential: {
+        publicKeyJwk: user.publicKey,
+        signCount: user.signCount
+      },
+      expectedChallenge: challenge.id,
+      expectedHostname: 'localhost',
+      isAllowedCredentialId: () => true,
+    })
+    res.sendStatus(200)
+  } catch (e) {
+    console.log('Error on /api/verify-assertion', e)
+    res.senStatus(500)
   }
 })
 
