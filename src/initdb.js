@@ -13,7 +13,7 @@ const initDatabase = async () => {
   )`)
   await exec(`
   CREATE TABLE IF NOT EXISTS t_challenge  (
-    c_login varchar(255) UNIQUE NOT NULL,
+    c_login varchar(255),
     c_id VARCHAR(255) NOT NULL,
     c_validuntil DATETIME NOT NULL
   )`)

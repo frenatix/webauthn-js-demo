@@ -1,10 +1,11 @@
 window.onload = function () {
   document.getElementById('register').onclick = function () {
     const username = readUsername()
+    const useResidentKey = document.getElementById('use-resident-key').checked
     if (!username) {
       alert('username is empty')
     } else {
-      register(username)
+      register(username, useResidentKey)
     }
   }
   document.getElementById('login').onclick = function () {
@@ -15,13 +16,16 @@ window.onload = function () {
       login(username)
     }
   }
+  document.getElementById('username-less-login').onclick = function () {
+    login('')
+  }
 }
 
 function readUsername() {
   return document.getElementById('username').value
 }
 
-function _decodeBuffer(value) {
+function decodeBuffer(value) {
   return Uint8Array.from(atob(value), (c) => c.charCodeAt(0))
 }
 function base64encode(arrayBuffer) {
@@ -35,10 +39,10 @@ function arrayBufferToString(arrayBuffer) {
   return String.fromCharCode.apply(null, new Uint8Array(arrayBuffer))
 }
 
-function register(username) {
+function register(username, useResidentKey) {
   fetch(`/api/register`, {
     method: 'PUT',
-    body: JSON.stringify({ login: username }),
+    body: JSON.stringify({ login: username, useResidentKey }),
     headers: {
       'content-type': 'application/json'
     }
@@ -54,10 +58,10 @@ function register(username) {
     .then((data) => {
       const publicKey = {
         ...data.publicKey,
-        challenge: _decodeBuffer(data.publicKey.challenge),
+        challenge: decodeBuffer(data.publicKey.challenge),
         user: {
           ...data.publicKey.user,
-          id: this._decodeBuffer(data.publicKey.user.id)
+          id: decodeBuffer(data.publicKey.user.id)
         }
       }
       navigator.credentials
@@ -113,8 +117,8 @@ function login(username) {
     .then((data) => {
       const publicKey = {
         ...data.publicKey,
-        challenge: _decodeBuffer(data.publicKey.challenge),
-        allowCredentials: data.publicKey.allowCredentials.map((cred) => ({ ...cred, id: this._decodeBuffer(cred.id) }))
+        challenge: decodeBuffer(data.publicKey.challenge),
+        allowCredentials: data.publicKey.allowCredentials.map((cred) => ({ ...cred, id: decodeBuffer(cred.id) }))
       }
       navigator.credentials
         .get({

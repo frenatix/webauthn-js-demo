@@ -6,8 +6,8 @@ const webauthn = require('@frenatix/webauthn-js')
 
 router.put('/register', async (req, res) => {
   try {
-    const { login } = req.body
-    console.log(`Call /api/register with login: ${login}`)
+    const { login, useResidentKey } = req.body
+    console.log(`Call /api/register with login: ${login}, useResidentKey: ${useResidentKey}`)
 
     if (!login) {
       console.error("login can't be empty")
@@ -27,7 +27,6 @@ router.put('/register', async (req, res) => {
     const challengeBytes = newChallenge()
     const challenge = Buffer.from(challengeBytes).toString('base64')
     console.log(`New challenge: ${challenge}`)
-    await Persistence.ChallengeDAO.deleteChallenge({ login })
     await Persistence.ChallengeDAO.createChallenge({ login, id: base64url.encode(challengeBytes) })
 
     res.json({
@@ -53,7 +52,7 @@ router.put('/register', async (req, res) => {
           }
         ],
         authenticatorSelection: {
-          requireResidentKey: false, // true is username-less
+          requireResidentKey: useResidentKey, // true is username-less
           userVerification: 'preferred'
         },
         challenge,
@@ -110,26 +109,32 @@ router.put('/login', async (req, res) => {
   try {
     const { login } = req.body
     console.log('Login', login)
+    const isUsernameLess = login === ''
 
-    const user = await Persistence.UserDAO.getUserByLogin({ login })
-    if (!user) {
-      res.sendStatus(404)
-      return
+    let credentialId
+    if (!isUsernameLess && login) {
+      const user = await Persistence.UserDAO.getUserByLogin({ login })
+      if (!user) {
+        res.sendStatus(404)
+        return
+      }
+      credentialId = user.credentialId
     }
     const challengeBytes = newChallenge()
     const challenge = Buffer.from(challengeBytes).toString('base64')
     console.log(`New challenge: ${challenge}`)
-    await Persistence.ChallengeDAO.deleteChallenge({ login })
     await Persistence.ChallengeDAO.createChallenge({ login, id: base64url.encode(challengeBytes) })
 
     res.json({
       publicKey: {
-        allowCredentials: [
-          {
-            type: 'public-key',
-            id: user.credentialId
-          }
-        ],
+        allowCredentials: isUsernameLess
+          ? []
+          : [
+              {
+                type: 'public-key',
+                id: credentialId
+              }
+            ],
         challenge,
         userVerification: 'preferred'
       }
@@ -168,7 +173,7 @@ router.put('/verify-assertion', async (req, res) => {
       },
       expectedChallenge: challenge.id,
       expectedHostname: 'localhost',
-      isAllowedCredentialId: () => true,
+      isAllowedCredentialId: () => true
     })
     res.sendStatus(200)
   } catch (e) {

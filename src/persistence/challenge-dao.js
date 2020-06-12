@@ -12,7 +12,7 @@ const deleteChallenge = ({login}) => {
 }
 
 const createChallenge = ({ login, id }) => {
-  return run("INSERT INTO t_challenge (c_login, c_id, c_validuntil) values($login, $id, DATETIME(CURRENT_TIMESTAMP, '+10 minutes', 'localtime'))", {
+  return run("INSERT INTO t_challenge (c_login, c_id, c_validuntil) values($login, $id, DATETIME(CURRENT_TIMESTAMP, '+2 minutes', 'localtime'))", {
     $login: login,
     $id: id,
   })
