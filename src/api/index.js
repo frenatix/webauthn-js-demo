@@ -4,6 +4,8 @@ const { newChallenge } = require('../util/common-util')
 const base64url = require('base64url')
 const webauthn = require('@frenatix/webauthn-js')
 
+const WEBAUTHN_DOMAIN = process.env.WEBAUTHN_DOMAIN
+
 router.put('/register', async (req, res) => {
   try {
     const { login, useResidentKey } = req.body
@@ -78,7 +80,7 @@ router.put('/make-new-credential', async (req, res) => {
         // TODO Check if challenge is still valid
         return challengeToken
       },
-      expectedHostname: 'localhost',
+      expectedHostname: WEBAUTHN_DOMAIN,
       isValidCredentialId: async (credentialId) => {
         // Check if there's already an user with this credentialId
         const user = await Persistence.UserDAO.getUserByCredentialId({ credentialId })
@@ -172,7 +174,7 @@ router.put('/verify-assertion', async (req, res) => {
         // TODO Check if challenge is still valid
         return challengeToken
       },
-      expectedHostname: 'localhost',
+      expectedHostname: WEBAUTHN_DOMAIN,
       isAllowedCredentialId: () => true, // Every credential ID is welcome :)
       updateSignCount: async ({ credentialId, oldSignCount, newSignCount }) => {
         console.log(`Update signCount from ${oldSignCount} to ${newSignCount}`)
